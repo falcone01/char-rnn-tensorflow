@@ -1,14 +1,16 @@
+import codecs
 import os
 import collections
 from six.moves import cPickle
 import numpy as np
-import codecs
+
 
 class TextLoader():
-    def __init__(self, data_dir, batch_size, seq_length):
+    def __init__(self, data_dir, batch_size, seq_length, encoding='utf-8'):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.seq_length = seq_length
+        self.encoding = encoding
 
         input_file = os.path.join(data_dir, "input.txt")
         vocab_file = os.path.join(data_dir, "vocab.pkl")
@@ -24,7 +26,7 @@ class TextLoader():
         self.reset_batch_pointer()
 
     def preprocess(self, input_file, vocab_file, tensor_file):
-        with codecs.open(input_file, "r",encoding='utf-8',errors='ignore') as f:
+        with codecs.open(input_file, "r", encoding=self.encoding) as f:
             data = f.read()
         counter = collections.Counter(data)
         count_pairs = sorted(counter.items(), key=lambda x: -x[1])
@@ -49,8 +51,9 @@ class TextLoader():
         self.num_batches = int(self.tensor.size / (self.batch_size *
                                                    self.seq_length))
 
-        # When the data (tesor) is too small, let's give them a better error message
-        if self.num_batches==0:
+        # When the data (tensor) is too small,
+        # let's give them a better error message
+        if self.num_batches == 0:
             assert False, "Not enough data. Make seq_length and batch_size small."
 
         self.tensor = self.tensor[:self.num_batches * self.batch_size * self.seq_length]
@@ -58,9 +61,10 @@ class TextLoader():
         ydata = np.copy(self.tensor)
         ydata[:-1] = xdata[1:]
         ydata[-1] = xdata[0]
-        self.x_batches = np.split(xdata.reshape(self.batch_size, -1), self.num_batches, 1)
-        self.y_batches = np.split(ydata.reshape(self.batch_size, -1), self.num_batches, 1)
-
+        self.x_batches = np.split(xdata.reshape(self.batch_size, -1),
+                                  self.num_batches, 1)
+        self.y_batches = np.split(ydata.reshape(self.batch_size, -1),
+                                  self.num_batches, 1)
 
     def next_batch(self):
         x, y = self.x_batches[self.pointer], self.y_batches[self.pointer]
